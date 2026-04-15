@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Récupérer le code web
+      uses: actions/checkout@v4
+
+    - name: Configurer Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Configurer Java (pour Android)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Installer les dépendances du projet
+      run: npm install
+
+    - name: Compiler le projet web (Vite)
+      run: npm run build
+
+    - name: Installer et configurer Capacitor
+      run: |
+        npm install @capacitor/core @capacitor/android
+        npm install -D @capacitor/cli
+        npx cap init "Mon Application" "com.monapp.local" --web-dir dist
+        npx cap add android
+
+    - name: Synchroniser les fichiers web vers Android
+      run: npx cap sync android
+
+    - name: Donner les droits d'exécution pour la compilation
+      run: chmod +x ./android/gradlew
+
+    - name: Fabriquer l'APK
+      run: cd android && ./gradlew assembleDebug
+
+    - name: Mettre l'APK à disposition pour le téléchargement
+      uses: actions/upload-artifact@v4
+      with:
+        name: MonApplication-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
